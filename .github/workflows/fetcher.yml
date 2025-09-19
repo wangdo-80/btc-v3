@@ -1,8 +1,8 @@
-name: BTC Hourly Fetcher (multi-source)
+name: BTC Hourly Fetcher (OKX + CoinGecko)
 
 on:
   schedule:
-    - cron: "0 * * * *"   # chạy mỗi 1h
+    - cron: "0 * * * *"   # mỗi 1 giờ
   workflow_dispatch:
 
 jobs:
