@@ -1,5 +1,6 @@
 // fetcher.mjs
-// Lấy dữ liệu từ Binance và đẩy vào Worker Aggregator
+// Lấy dữ liệu BTC từ nhiều nguồn thay thế (OKX, Bybit, CoinGecko)
+// rồi push về Worker
 
 async function main() {
   const aggUrl = process.env.AGG_URL;
@@ -9,32 +10,39 @@ async function main() {
     process.exit(1);
   }
 
-  // Hàm fetch JSON từ Binance
   const fetchJSON = async (url) => {
-    const res = await fetch(url, {
+    const r = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (GitHub Action)" }
     });
-    if (!res.ok) throw new Error("HTTP " + res.status + " @ " + url);
-    return res.json();
+    if (!r.ok) throw new Error("HTTP " + r.status + " @ " + url);
+    return r.json();
   };
 
   try {
-    // Endpoint Binance
-    const [spot, mark, funding, oi] = await Promise.all([
-      fetchJSON("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"),
-      fetchJSON("https://fapi.binance.com/fapi/v1/premiumIndex?symbol=BTCUSDT"),
-      fetchJSON("https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1"),
-      fetchJSON("https://fapi.binance.com/futures/data/openInterestHist?symbol=BTCUSDT&period=5m&limit=1")
-    ]);
+    // Spot price từ CoinGecko (luôn sẵn)
+    const cg = await fetchJSON("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usdt");
+    const spot = cg.bitcoin.usdt;
+
+    // Mark price từ OKX
+    const okx = await fetchJSON("https://www.okx.com/api/v5/public/mark-price?instType=SWAP&instId=BTC-USDT-SWAP");
+    const mark = Number(okx.data?.[0]?.markPx ?? spot);
+
+    // Funding rate từ Bybit
+    const bybit = await fetchJSON("https://api.bybit.com/v2/public/funding/prev-funding-rate?symbol=BTCUSDT");
+    const funding = Number(bybit.result?.funding_rate ?? 0);
+
+    // Open Interest từ OKX
+    const oiOkx = await fetchJSON("https://www.okx.com/api/v5/public/open-interest?instId=BTC-USDT-SWAP");
+    const oi = Number(oiOkx.data?.[0]?.oi ?? 0);
 
     const payload = {
       ts: Date.now(),
-      spot: Number(spot.price),
-      mark: Number(mark.markPrice),
-      basis_bps: ((mark.markPrice - spot.price) / spot.price) * 10000,
-      funding: Number(funding[0]?.fundingRate ?? 0),
-      oi: Number(oi[0]?.sumOpenInterest ?? 0),
-      source: "fetcher"
+      spot: Number(spot),
+      mark: mark,
+      basis_bps: ((mark - spot) / spot) * 10000,
+      funding: funding,
+      oi: oi,
+      source: "multi-source" // thay vì binance
     };
 
     console.log("Payload:", payload);
