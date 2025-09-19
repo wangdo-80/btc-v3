@@ -1,4 +1,4 @@
-name: Binance BTC Hourly Fetcher
+name: BTC Hourly Fetcher (multi-source)
 
 on:
   schedule:
