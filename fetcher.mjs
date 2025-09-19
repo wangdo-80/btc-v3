@@ -1,17 +1,34 @@
-const AGG_URL = process.env.AGG_URL;
-const AGG_PUSH_KEY = process.env.AGG_PUSH_KEY;
-if (!AGG_URL || !AGG_PUSH_KEY) { console.error('Missing AGG_URL or AGG_PUSH_KEY'); process.exit(1); }
+import fetch from "node-fetch";
+
+const AGG_URL = process.env.AGG_URL;   // https://btc-v3.<subdomain>.workers.dev
+const PUSH_KEY = process.env.PUSH_KEY;
 
 async function main() {
-  const url = `${AGG_URL.replace(/\/+$/,'')}/push`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type':'application/json', 'X-API-KEY': AGG_PUSH_KEY },
-    body: JSON.stringify({}) // Worker tự fetch
+  // 1. Lấy dữ liệu từ Binance
+  const spot = await (await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT")).json();
+  const mark = await (await fetch("https://fapi.binance.com/fapi/v1/premiumIndex?symbol=BTCUSDT")).json();
+  const oi = await (await fetch("https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT")).json();
+
+  const snap = {
+    ts: Date.now(),
+    spot: Number(spot.price),
+    mark: Number(mark.markPrice),
+    basis: Number(mark.lastFundingRate),
+    oi: Number(oi.openInterest),
+    source: "fetcher"
+  };
+
+  // 2. Gửi dữ liệu về Worker
+  const res = await fetch(`${AGG_URL}/push`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-API-KEY": PUSH_KEY },
+    body: JSON.stringify(snap)
   });
-  const text = await res.text();
-  console.log('HTTP status:', res.status);
-  console.log('Body head:', text.slice(0, 300));
-  if (!res.ok) process.exit(1);
+
+  console.log("Push result:", await res.text());
 }
-main().catch(e => { console.error('Network/Fetch error:', e); process.exit(1); });
+
+main().catch(err => {
+  console.error("Fetcher error", err);
+  process.exit(1);
+});
