@@ -1,39 +1,25 @@
-import fetch from "node-fetch";
+// Node 20 có fetch builtin
+const AGG_URL = process.env.AGG_URL;
+const AGG_PUSH_KEY = process.env.AGG_PUSH_KEY;
 
-async function main() {
-  const aggUrl = process.env.AGG_URL;
-  const pushKey = process.env.AGG_PUSH_KEY;
-
-  try {
-    // Gọi Binance Vision Data API (không bị 451)
-    const r = await fetch("https://data-api.binance.vision/api/v3/ticker/24hr?symbol=BTCUSDT");
-    if (!r.ok) throw new Error("Binance API error " + r.status);
-    const d = await r.json();
-
-    const snap = {
-      price: Number(d.lastPrice),
-      vol: Number(d.volume),
-      change: Number(d.priceChangePercent),
-      ts: Date.now(),
-      source: "fetcher"
-    };
-
-    const res = await fetch(`${aggUrl}/push`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-KEY": pushKey
-      },
-      body: JSON.stringify(snap)
-    });
-
-    const out = await res.json();
-    console.log("Pushed:", out);
-
-  } catch (err) {
-    console.error("Fetcher error:", err.message);
-    process.exit(1);
-  }
+if (!AGG_URL || !AGG_PUSH_KEY) {
+  console.error('Missing AGG_URL or AGG_PUSH_KEY');
+  process.exit(1);
 }
 
-main();
+async function main() {
+  const url = `${AGG_URL.replace(/\/+$/,'')}/push`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'X-API-KEY': AGG_PUSH_KEY },
+    body: JSON.stringify({}) // không gửi payload, Worker sẽ tự fetch & tính
+  });
+  const txt = await resp.text();
+  if (!resp.ok) {
+    console.error('Push failed:', resp.status, txt);
+    process.exit(1);
+  }
+  console.log('Push ok:', txt.slice(0,200));
+}
+
+main().catch(e => { console.error(e); process.exit(1); });
