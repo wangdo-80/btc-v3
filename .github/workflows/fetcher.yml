@@ -1,8 +1,8 @@
-name: BTC Hourly Fetcher (OKX + CoinGecko)
+name: BTC Hourly Fetcher
 
 on:
   schedule:
-    - cron: "0 * * * *"   # mỗi 1 giờ
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -13,8 +13,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Run fetcher
-        run: node fetcher.mjs
+      - run: npm install node-fetch
+      - run: node fetcher.mjs
         env:
           AGG_URL: ${{ secrets.AGG_URL }}
           PUSH_KEY: ${{ secrets.PUSH_KEY }}
