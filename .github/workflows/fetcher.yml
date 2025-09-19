@@ -1,7 +1,7 @@
 name: Binance BTC Hourly Fetcher
 on:
   schedule:
-    - cron: "0 * * * *"   # chạy mỗi 1h
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 jobs:
