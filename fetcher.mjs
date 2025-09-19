@@ -5,12 +5,11 @@ async function main() {
   const pushKey = process.env.AGG_PUSH_KEY;
 
   try {
-    // Lấy giá BTC spot từ Binance
-    const r = await fetch("https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT");
+    // Gọi Binance Vision Data API (không bị 451)
+    const r = await fetch("https://data-api.binance.vision/api/v3/ticker/24hr?symbol=BTCUSDT");
     if (!r.ok) throw new Error("Binance API error " + r.status);
     const d = await r.json();
 
-    // Tạo snapshot
     const snap = {
       price: Number(d.lastPrice),
       vol: Number(d.volume),
@@ -19,7 +18,6 @@ async function main() {
       source: "fetcher"
     };
 
-    // Đẩy vào Worker
     const res = await fetch(`${aggUrl}/push`, {
       method: "POST",
       headers: {
