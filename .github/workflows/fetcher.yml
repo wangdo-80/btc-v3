@@ -1,19 +1,17 @@
 name: BTC Hourly Fetcher
-
 on:
-  schedule:
-    - cron: "0 * * * *"
   workflow_dispatch:
-
+  schedule:
+    - cron: "0 * * * *"  # mỗi giờ
 jobs:
   run:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm install node-fetch
+        with: { node-version: "20" }
       - run: node fetcher.mjs
         env:
           AGG_URL: ${{ secrets.AGG_URL }}
